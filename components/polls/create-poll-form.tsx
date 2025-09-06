@@ -1,7 +1,8 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -9,129 +10,148 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { CreatePollData } from "@/types"
-import { X, Plus } from "lucide-react"
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { CreatePollData } from "@/types";
+import { X, Plus } from "lucide-react";
 
 interface CreatePollFormProps {
-  onSubmit: (data: CreatePollData) => Promise<void>
-  isLoading?: boolean
+  onSubmit: (data: CreatePollData) => Promise<void>;
+  isLoading?: boolean;
+  onSuccess?: () => void;
 }
 
-export function CreatePollForm({ onSubmit, isLoading = false }: CreatePollFormProps) {
+export function CreatePollForm({
+  onSubmit,
+  isLoading = false,
+  onSuccess,
+}: CreatePollFormProps) {
+  const router = useRouter();
   const [formData, setFormData] = useState<CreatePollData>({
     title: "",
     description: "",
     options: ["", ""],
     allowMultipleVotes: false,
     expiresAt: undefined,
-  })
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {}
+    const newErrors: Record<string, string> = {};
 
     if (!formData.title.trim()) {
-      newErrors.title = "Poll title is required"
+      newErrors.title = "Poll title is required";
     } else if (formData.title.length < 5) {
-      newErrors.title = "Title must be at least 5 characters"
+      newErrors.title = "Title must be at least 5 characters";
     }
 
-    const validOptions = formData.options.filter(option => option.trim().length > 0)
+    const validOptions = formData.options.filter(
+      (option) => option.trim().length > 0,
+    );
     if (validOptions.length < 2) {
-      newErrors.options = "At least 2 options are required"
+      newErrors.options = "At least 2 options are required";
     }
 
     formData.options.forEach((option, index) => {
       if (option.trim() && option.length < 2) {
-        newErrors[`option-${index}`] = "Option must be at least 2 characters"
+        newErrors[`option-${index}`] = "Option must be at least 2 characters";
       }
-    })
+    });
 
     if (formData.expiresAt && new Date(formData.expiresAt) <= new Date()) {
-      newErrors.expiresAt = "Expiration date must be in the future"
+      newErrors.expiresAt = "Expiration date must be in the future";
     }
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (!validateForm()) {
-      return
+      return;
     }
 
-    const validOptions = formData.options.filter(option => option.trim().length > 0)
+    const validOptions = formData.options.filter(
+      (option) => option.trim().length > 0,
+    );
     const submitData: CreatePollData = {
       ...formData,
       options: validOptions,
       description: formData.description?.trim() || undefined,
-    }
+    };
 
     try {
-      await onSubmit(submitData)
+      await onSubmit(submitData);
+      // Reset form on success
+      setFormData({
+        title: "",
+        description: "",
+        options: ["", ""],
+        allowMultipleVotes: false,
+        expiresAt: undefined,
+      });
+      setErrors({});
+      onSuccess?.();
     } catch (error) {
       // Error handling is done in the parent component
     }
-  }
+  };
 
   const addOption = () => {
     if (formData.options.length < 6) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        options: [...prev.options, ""]
-      }))
+        options: [...prev.options, ""],
+      }));
     }
-  }
+  };
 
   const removeOption = (index: number) => {
     if (formData.options.length > 2) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        options: prev.options.filter((_, i) => i !== index)
-      }))
+        options: prev.options.filter((_, i) => i !== index),
+      }));
     }
-  }
+  };
 
   const updateOption = (index: number, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      options: prev.options.map((option, i) => i === index ? value : option)
-    }))
+      options: prev.options.map((option, i) => (i === index ? value : option)),
+    }));
 
     // Clear option error when user starts typing
     if (errors[`option-${index}`]) {
-      setErrors(prev => ({
-        ...prev,
-        [`option-${index}`]: undefined,
-      }))
+      const newErrors = { ...errors };
+      delete newErrors[`option-${index}`];
+      setErrors(newErrors);
     }
-  }
+  };
 
-  const handleInputChange = (field: keyof CreatePollData) => (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const value = field === 'allowMultipleVotes'
-      ? (e.target as HTMLInputElement).checked
-      : e.target.value
+  const handleInputChange =
+    (field: keyof CreatePollData) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      const value =
+        field === "allowMultipleVotes"
+          ? (e.target as HTMLInputElement).checked
+          : e.target.value;
 
-    setFormData(prev => ({
-      ...prev,
-      [field]: value,
-    }))
-
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        [field]: undefined,
-      }))
-    }
-  }
+        [field]: value,
+      }));
+
+      // Clear error when user starts typing
+      if (errors[field]) {
+        const newErrors = { ...errors };
+        delete newErrors[field];
+        setErrors(newErrors);
+      }
+    };
 
   return (
     <Card className="w-full max-w-2xl">
@@ -196,7 +216,9 @@ export function CreatePollForm({ onSubmit, isLoading = false }: CreatePollFormPr
                     value={option}
                     onChange={(e) => updateOption(index, e.target.value)}
                     disabled={isLoading}
-                    className={errors[`option-${index}`] ? "border-red-500" : ""}
+                    className={
+                      errors[`option-${index}`] ? "border-red-500" : ""
+                    }
                   />
                   {errors[`option-${index}`] && (
                     <p className="text-sm text-red-500 mt-1">
@@ -243,11 +265,19 @@ export function CreatePollForm({ onSubmit, isLoading = false }: CreatePollFormPr
               <Input
                 id="expiresAt"
                 type="datetime-local"
-                value={formData.expiresAt ? new Date(formData.expiresAt).toISOString().slice(0, 16) : ""}
-                onChange={(e) => setFormData(prev => ({
-                  ...prev,
-                  expiresAt: e.target.value ? new Date(e.target.value) : undefined
-                }))}
+                value={
+                  formData.expiresAt
+                    ? new Date(formData.expiresAt).toISOString().slice(0, 16)
+                    : ""
+                }
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    expiresAt: e.target.value
+                      ? new Date(e.target.value)
+                      : undefined,
+                  }))
+                }
                 disabled={isLoading}
                 className={errors.expiresAt ? "border-red-500" : ""}
               />
@@ -262,17 +292,15 @@ export function CreatePollForm({ onSubmit, isLoading = false }: CreatePollFormPr
             type="button"
             variant="outline"
             disabled={isLoading}
+            onClick={() => router.push("/polls")}
           >
             Cancel
           </Button>
-          <Button
-            type="submit"
-            disabled={isLoading}
-          >
+          <Button type="submit" disabled={isLoading}>
             {isLoading ? "Creating Poll..." : "Create Poll"}
           </Button>
         </CardFooter>
       </form>
     </Card>
-  )
+  );
 }

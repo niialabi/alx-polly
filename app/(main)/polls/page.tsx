@@ -1,97 +1,98 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { PollCard } from "@/components/polls/poll-card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Poll, PollFilters, PaginatedResponse } from "@/types"
-import { Search, Filter, Plus } from "lucide-react"
-import Link from "next/link"
+import { useState, useEffect } from "react";
+import { PollCard } from "@/components/polls/poll-card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Poll, PollFilters, PaginatedResponse } from "@/types";
+import { Search, Filter, Plus } from "lucide-react";
+import Link from "next/link";
 
 export default function PollsPage() {
-  const [polls, setPolls] = useState<Poll[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [isVoting, setIsVoting] = useState<Record<string, boolean>>({})
-  const [error, setError] = useState<string>("")
+  const [polls, setPolls] = useState<Poll[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isVoting, setIsVoting] = useState<Record<string, boolean>>({});
+  const [error, setError] = useState<string>("");
   const [filters, setFilters] = useState<PollFilters>({
     search: "",
     isActive: undefined,
     sortBy: "createdAt",
     sortOrder: "desc",
-  })
-  const [showFilters, setShowFilters] = useState(false)
+  });
+  const [showFilters, setShowFilters] = useState(false);
 
   const fetchPolls = async () => {
-    setIsLoading(true)
-    setError("")
+    setIsLoading(true);
+    setError("");
 
     try {
-      const searchParams = new URLSearchParams()
+      const searchParams = new URLSearchParams();
 
-      if (filters.search) searchParams.append("search", filters.search)
-      if (filters.isActive !== undefined) searchParams.append("isActive", filters.isActive.toString())
-      if (filters.sortBy) searchParams.append("sortBy", filters.sortBy)
-      if (filters.sortOrder) searchParams.append("sortOrder", filters.sortOrder)
+      if (filters.search) searchParams.append("search", filters.search);
+      if (filters.isActive !== undefined)
+        searchParams.append("isActive", filters.isActive.toString());
+      if (filters.sortBy) searchParams.append("sortBy", filters.sortBy);
+      if (filters.sortOrder)
+        searchParams.append("sortOrder", filters.sortOrder);
 
-      const response = await fetch(`/api/polls?${searchParams.toString()}`)
-      const result: PaginatedResponse<Poll> = await response.json()
+      const response = await fetch(`/api/polls?${searchParams.toString()}`);
+      const result: PaginatedResponse<Poll> = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || "Failed to fetch polls")
+        throw new Error(result.error || "Failed to fetch polls");
       }
 
       if (result.success && result.data) {
-        setPolls(result.data)
+        setPolls(result.data);
       }
     } catch (error) {
-      console.error("Error fetching polls:", error)
-      setError(error instanceof Error ? error.message : "Failed to load polls")
+      console.error("Error fetching polls:", error);
+      setError(error instanceof Error ? error.message : "Failed to load polls");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchPolls()
-  }, [filters])
+    fetchPolls();
+  }, [filters]);
 
   const handleVote = async (pollId: string, optionId: string) => {
-    setIsVoting(prev => ({ ...prev, [pollId]: true }))
+    setIsVoting((prev) => ({ ...prev, [pollId]: true }));
 
     try {
       const response = await fetch(`/api/polls/${pollId}/vote`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("auth_token")}`,
         },
         body: JSON.stringify({ optionId }),
-      })
+      });
 
-      const result = await response.json()
+      const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || "Failed to vote")
+        throw new Error(result.error || "Failed to vote");
       }
 
       // Refresh the polls to show updated vote counts
-      await fetchPolls()
+      await fetchPolls();
     } catch (error) {
-      console.error("Error voting:", error)
+      console.error("Error voting:", error);
       // You might want to show a toast notification here
     } finally {
-      setIsVoting(prev => ({ ...prev, [pollId]: false }))
+      setIsVoting((prev) => ({ ...prev, [pollId]: false }));
     }
-  }
+  };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFilters(prev => ({ ...prev, search: e.target.value }))
-  }
+    setFilters((prev) => ({ ...prev, search: e.target.value }));
+  };
 
   const handleFilterChange = (key: keyof PollFilters, value: any) => {
-    setFilters(prev => ({ ...prev, [key]: value }))
-  }
+    setFilters((prev) => ({ ...prev, [key]: value }));
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -140,10 +141,19 @@ export default function PollsPage() {
               <div className="space-y-2">
                 <Label>Status</Label>
                 <select
-                  value={filters.isActive === undefined ? "" : filters.isActive.toString()}
-                  onChange={(e) => handleFilterChange("isActive",
-                    e.target.value === "" ? undefined : e.target.value === "true"
-                  )}
+                  value={
+                    filters.isActive === undefined
+                      ? ""
+                      : filters.isActive.toString()
+                  }
+                  onChange={(e) =>
+                    handleFilterChange(
+                      "isActive",
+                      e.target.value === ""
+                        ? undefined
+                        : e.target.value === "true",
+                    )
+                  }
                   className="w-full h-10 px-3 rounded-md border border-input bg-background"
                 >
                   <option value="">All polls</option>
@@ -170,7 +180,12 @@ export default function PollsPage() {
                 <Label>Order</Label>
                 <select
                   value={filters.sortOrder}
-                  onChange={(e) => handleFilterChange("sortOrder", e.target.value as "asc" | "desc")}
+                  onChange={(e) =>
+                    handleFilterChange(
+                      "sortOrder",
+                      e.target.value as "asc" | "desc",
+                    )
+                  }
                   className="w-full h-10 px-3 rounded-md border border-input bg-background"
                 >
                   <option value="desc">Descending</option>
@@ -210,7 +225,9 @@ export default function PollsPage() {
             ) : (
               <div className="text-center py-12">
                 <div className="text-muted-foreground mb-4">
-                  {filters.search ? "No polls found matching your search." : "No polls available yet."}
+                  {filters.search
+                    ? "No polls found matching your search."
+                    : "No polls available yet."}
                 </div>
                 <Button asChild>
                   <Link href="/create-poll">
@@ -224,5 +241,5 @@ export default function PollsPage() {
         )}
       </div>
     </div>
-  )
+  );
 }

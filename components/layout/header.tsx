@@ -1,32 +1,32 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { User, Menu, X, Vote, Plus, BarChart3, Home } from "lucide-react"
+import { useState } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { User, Menu, X, Vote, Plus, BarChart3, Home } from "lucide-react";
 
 interface HeaderProps {
   user?: {
-    id: string
-    username: string
-    email: string
-  } | null
-  onLogout?: () => void
+    id: string;
+    username: string;
+    email: string;
+  } | null;
+  onLogout?: () => void;
 }
 
 export function Header({ user, onLogout }: HeaderProps) {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen)
-  }
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
 
   const navItems = [
     { href: "/", label: "Home", icon: Home },
     { href: "/polls", label: "Polls", icon: Vote },
     { href: "/create-poll", label: "Create", icon: Plus },
     { href: "/dashboard", label: "Dashboard", icon: BarChart3 },
-  ]
+  ];
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -60,11 +60,7 @@ export function Header({ user, onLogout }: HeaderProps) {
                   <User className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm font-medium">{user.username}</span>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onLogout}
-                >
+                <Button variant="outline" size="sm" onClick={onLogout}>
                   Logout
                 </Button>
               </div>
@@ -116,7 +112,9 @@ export function Header({ user, onLogout }: HeaderProps) {
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2 px-3 py-2">
                       <User className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">{user.username}</span>
+                      <span className="text-sm font-medium">
+                        {user.username}
+                      </span>
                     </div>
                     <Button
                       variant="outline"
@@ -143,5 +141,5 @@ export function Header({ user, onLogout }: HeaderProps) {
         )}
       </div>
     </header>
-  )
+  );
 }

@@ -1,253 +1,226 @@
-# AlxPolly - Polling Application
+# ALX Polly - Polling Application
 
-A modern, full-featured polling application built with Next.js 15, TypeScript, and Tailwind CSS. Create polls, gather opinions, and make data-driven decisions with a beautiful, responsive interface.
+A modern, real-time polling application built with Next.js, TypeScript, and Supabase.
 
-## 🚀 Features
+## Features
 
-### Authentication
-- User registration and login
-- Secure JWT-based authentication
-- Protected routes and user sessions
-- User profile management
+- 🗳️ Create and manage polls
+- 📊 Real-time voting and results
+- 🔐 User authentication with Supabase Auth
+- 📱 Responsive design
+- 🚀 Server-side rendering with Next.js
+- 💾 PostgreSQL database with Supabase
+- 🎨 Modern UI with Tailwind CSS and shadcn/ui
 
-### Poll Management
-- Create polls with multiple options (up to 6 choices)
-- Support for single-choice and multiple-choice polls
-- Set expiration dates for time-limited polls
-- Real-time vote counting and results
-- Poll status management (active/inactive)
+## Tech Stack
 
-### User Experience
-- Clean, modern interface using Shadcn UI components
-- Responsive design for all devices
-- Real-time updates and live voting
-- Poll sharing and social features
-- Dashboard with user statistics
-- Search and filter functionality
+- **Framework**: Next.js 14 with App Router
+- **Language**: TypeScript
+- **Database**: Supabase (PostgreSQL)
+- **Authentication**: Supabase Auth
+- **Styling**: Tailwind CSS
+- **UI Components**: shadcn/ui
+- **Icons**: Lucide React
 
-### Technical Features
-- Server-side rendering with Next.js 15
-- Type-safe development with TypeScript
-- Modern CSS with Tailwind CSS
-- Component library with Shadcn UI
-- RESTful API routes
-- Modular architecture
-
-## 🏗️ Project Structure
-
-```
-alx-polly/
-├── app/                          # Next.js App Router
-│   ├── (auth)/                   # Authentication routes
-│   │   ├── login/
-│   │   └── register/
-│   ├── (main)/                   # Main application routes
-│   │   ├── create-poll/
-│   │   ├── dashboard/
-│   │   └── polls/
-│   │       └── [id]/             # Individual poll pages
-│   ├── api/                      # API routes
-│   │   ├── auth/
-│   │   │   ├── login/
-│   │   │   └── register/
-│   │   └── polls/
-│   ├── globals.css               # Global styles
-│   ├── layout.tsx                # Root layout
-│   └── page.tsx                  # Homepage
-├── components/                   # Reusable components
-│   ├── auth/                     # Authentication components
-│   │   ├── login-form.tsx
-│   │   └── register-form.tsx
-│   ├── layout/                   # Layout components
-│   │   └── header.tsx
-│   ├── polls/                    # Poll-related components
-│   │   ├── create-poll-form.tsx
-│   │   └── poll-card.tsx
-│   └── ui/                       # Shadcn UI components
-│       ├── button.tsx
-│       ├── card.tsx
-│       ├── input.tsx
-│       └── label.tsx
-├── lib/                          # Utility functions
-│   └── utils.ts                  # Common utilities
-├── types/                        # TypeScript type definitions
-│   └── index.ts                  # All type definitions
-├── public/                       # Static assets
-├── components.json               # Shadcn UI configuration
-├── next.config.ts               # Next.js configuration
-├── package.json                 # Dependencies
-├── tailwind.config.ts           # Tailwind configuration
-└── tsconfig.json                # TypeScript configuration
-```
-
-## 🎨 UI Components
-
-The application uses a comprehensive set of UI components:
-
-### Authentication Components
-- `LoginForm` - User login with validation
-- `RegisterForm` - User registration with validation
-
-### Poll Components
-- `PollCard` - Display polls with voting interface
-- `CreatePollForm` - Form for creating new polls with multiple options
-
-### Layout Components
-- `Header` - Navigation header with authentication state
-- `AuthProvider` - Authentication context provider
-
-### UI Components (Shadcn)
-- `Button` - Styled button with variants
-- `Card` - Content containers with header/footer
-- `Input` - Form input fields
-- `Label` - Form labels
-- And more as needed
-
-## 🔧 Getting Started
+## Getting Started
 
 ### Prerequisites
 
-- Node.js 18+ 
-- npm, yarn, or pnpm
+- Node.js 18+ and npm
+- A Supabase account and project
 
 ### Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd alx-polly
-   ```
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd alx-polly
+```
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   # or
-   yarn install
-   # or
-   pnpm install
-   ```
+2. Install dependencies:
+```bash
+npm install
+```
 
-3. **Run the development server**
-   ```bash
-   npm run dev
-   # or
-   yarn dev
-   # or
-   pnpm dev
-   ```
+3. **⚠️ REQUIRED: Set up environment variables**
+Create a `.env.local` file in the root directory:
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
-4. **Open your browser**
-   Navigate to [http://localhost:3000](http://localhost:3000)
+**How to get your Supabase credentials:**
+- Go to your [Supabase Dashboard](https://app.supabase.com)
+- Select your project
+- Go to Settings → API
+- Copy your "Project URL" and "anon public" key
 
-### Demo Credentials
+**Example .env.local:**
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://xyzcompany.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
 
-For testing purposes, you can use these demo credentials:
-- **Email**: demo@example.com
-- **Password**: password
+4. **Set up the database:**
+Run the following SQL in your Supabase SQL editor to create the required tables:
 
-## 📱 Usage
+```sql
+-- Create the 'polls' table to store poll questions
+CREATE TABLE IF NOT EXISTS public.polls (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    question text NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL,
+    ends_at timestamptz NULL,
+    user_id uuid NULL
+);
 
-### Creating Polls
-1. Register or login to your account
-2. Click "Create Poll" in the header or dashboard
-3. Enter poll title and description
-4. Add 2-6 poll options
-5. Configure settings (multiple votes, expiration)
-6. Submit to create your poll
+-- Create the 'options' table to store choices for each poll
+CREATE TABLE IF NOT EXISTS public.options (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    poll_id uuid NOT NULL REFERENCES public.polls(id) ON DELETE CASCADE,
+    text text NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL
+);
+
+-- Create the 'votes' table to record user votes
+CREATE TABLE IF NOT EXISTS public.votes (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    poll_id uuid NOT NULL REFERENCES public.polls(id) ON DELETE CASCADE,
+    option_id uuid NOT NULL REFERENCES public.options(id) ON DELETE CASCADE,
+    user_id uuid NULL,
+    created_at timestamptz DEFAULT now() NOT NULL
+);
+
+-- Add unique constraint to prevent multiple votes per user per poll
+CREATE UNIQUE INDEX IF NOT EXISTS user_poll_vote_unique ON public.votes (user_id, poll_id) WHERE (user_id IS NOT NULL);
+
+-- Enable Row Level Security
+ALTER TABLE public.polls ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.options ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.votes ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policies
+CREATE POLICY "Allow authenticated users to create polls" ON public.polls FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Allow all users to view polls" ON public.polls FOR SELECT USING (true);
+CREATE POLICY "Allow poll creators to update their polls" ON public.polls FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Allow poll creators to delete their polls" ON public.polls FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Allow all users to view options" ON public.options FOR SELECT USING (true);
+CREATE POLICY "Allow authenticated users to create options for their polls" ON public.options FOR INSERT WITH CHECK (
+    EXISTS (SELECT 1 FROM public.polls WHERE public.polls.id = public.options.poll_id AND public.polls.user_id = auth.uid())
+);
+
+CREATE POLICY "Allow authenticated users to vote once per poll" ON public.votes FOR INSERT WITH CHECK (
+    auth.role() = 'authenticated' AND user_id = auth.uid()
+);
+CREATE POLICY "Allow anonymous users to vote" ON public.votes FOR INSERT WITH CHECK (
+    auth.role() = 'anon' AND user_id IS NULL
+);
+CREATE POLICY "Allow all users to view votes" ON public.votes FOR SELECT USING (true);
+```
+
+5. **Run the development server:**
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+## Usage
+
+### Creating a Poll
+
+1. Navigate to `/create-poll` or click the "Create Poll" button
+2. Fill in the poll details:
+   - **Poll Title**: The main question (minimum 5 characters)
+   - **Description**: Optional additional context
+   - **Options**: Add 2-6 poll options
+   - **Settings**: Configure voting preferences and expiration date
+3. Click "Create Poll" to publish
 
 ### Voting on Polls
-1. Browse polls on the polls page
-2. Click on a poll to view details
-3. Select your preferred option(s)
-4. Click "Submit Vote" to record your choice
-5. View real-time results
 
-### Managing Your Polls
-1. Access your dashboard after logging in
-2. View statistics and poll performance
-3. See recent activity and vote counts
-4. Share polls with others
+1. Browse polls at `/polls` or view a specific poll
+2. Select your choice(s) based on the poll configuration
+3. Click "Submit Vote" to record your vote
+4. View real-time results after voting
 
-## 🛠️ API Endpoints
+### Poll Features
 
-### Authentication
-- `POST /api/auth/login` - User login
-- `POST /api/auth/register` - User registration
+- **Single vs Multiple Choice**: Configure whether users can select one or multiple options
+- **Anonymous Voting**: Non-authenticated users can vote (configurable via RLS policies)
+- **Authenticated Voting**: Registered users are limited to one vote per poll
+- **Poll Expiration**: Set optional expiration dates for polls
+- **Real-time Results**: Vote counts update immediately
+- **Responsive Design**: Works on desktop and mobile devices
+
+## API Routes
 
 ### Polls
-- `GET /api/polls` - Get all polls (with filtering)
-- `POST /api/polls` - Create new poll
-- `GET /api/polls/[id]` - Get specific poll
-- `POST /api/polls/[id]/vote` - Vote on poll
+- `GET /api/polls` - List all polls with filtering and pagination
+- `POST /api/polls` - Create a new poll
+- `GET /api/polls/[id]` - Get a specific poll with vote counts
+- `POST /api/polls/[id]/vote` - Vote on a poll
 
-## 🎯 Key Features Implementation
+### Query Parameters for GET /api/polls
+- `search`: Filter polls by title
+- `isActive`: Filter by active status (`true`/`false`)
+- `sortBy`: Sort by field (`createdAt`, `updatedAt`, `totalVotes`, `title`)
+- `sortOrder`: Sort direction (`asc`/`desc`)
+- `page`: Page number for pagination
+- `limit`: Items per page
 
-### Real-time Voting
-- Vote submission updates poll data immediately
-- Results refresh automatically after voting
-- Live vote counts and percentages
+## Project Structure
 
-### Responsive Design
-- Mobile-first approach
-- Adaptive layouts for all screen sizes
-- Touch-friendly interfaces
+```
+alx-polly/
+├── app/
+│   ├── (auth)/          # Authentication pages
+│   ├── (main)/          # Main application pages
+│   │   ├── create-poll/ # Poll creation page
+│   │   ├── polls/       # Poll listing and detail pages
+│   │   └── dashboard/   # User dashboard
+│   ├── api/             # API routes
+│   │   └── polls/       # Poll-related endpoints
+│   └── globals.css      # Global styles
+├── components/
+│   ├── auth/            # Authentication components
+│   ├── layout/          # Layout components
+│   ├── polls/           # Poll-specific components
+│   └── ui/              # Reusable UI components
+├── lib/
+│   ├── supabase/        # Supabase client configuration
+│   └── utils.ts         # Utility functions
+└── types/
+    └── index.ts         # TypeScript type definitions
+```
 
-### Type Safety
-- Comprehensive TypeScript definitions
-- Type-safe API calls and data handling
-- IntelliSense support throughout
+## Database Schema
 
-### User Experience
-- Loading states and error handling
-- Form validation and user feedback
-- Intuitive navigation and interactions
+The application uses three main tables:
 
-## 🔜 Upcoming Features
+- **polls**: Stores poll questions and metadata
+- **options**: Stores poll choices linked to polls
+- **votes**: Records user votes with foreign key relationships
 
-This scaffolding provides the foundation for implementing:
+Row Level Security (RLS) is enabled to ensure proper access control and prevent unauthorized data access.
 
-- [ ] Database integration (PostgreSQL/MongoDB)
-- [ ] Real authentication with JWT
-- [ ] Email verification
-- [ ] Poll analytics and insights
-- [ ] Comment system
-- [ ] Poll categories and tags
-- [ ] Advanced sharing options
-- [ ] Poll templates
-- [ ] Export functionality
-- [ ] Admin dashboard
-- [ ] API rate limiting
-- [ ] Push notifications
+## Authentication
 
-## 🧰 Technology Stack
+The app supports both authenticated and anonymous users:
+- **Authenticated users**: Can create polls and vote (limited to one vote per poll)
+- **Anonymous users**: Can vote on existing polls (multiple votes allowed by default)
 
-- **Framework**: Next.js 15 (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **Components**: Shadcn UI + Radix UI
-- **Icons**: Lucide React
-- **State Management**: React Context + useState
-- **Utilities**: clsx, tailwind-merge, class-variance-authority
+Authentication is handled by Supabase Auth with cookie-based sessions.
 
-## 📄 License
-
-This project is licensed under the MIT License.
-
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## 📞 Support
+## License
 
-For support and questions:
-- Create an issue in the repository
-- Contact the development team
-- Check the documentation
-
----
-
-Built with ❤️ using Next.js and modern web technologies.
+This project is licensed under the MIT License - see the LICENSE file for details.

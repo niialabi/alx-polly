@@ -1,137 +1,176 @@
-import { NextRequest, NextResponse } from "next/server"
-import { CreatePollData, Poll, ApiResponse, PaginatedResponse, PollFilters } from "@/types"
-
-// Mock data for demonstration
-const mockPolls: Poll[] = [
-  {
-    id: "1",
-    title: "What's your favorite programming language?",
-    description: "Help us understand the community's preferred programming languages",
-    options: [
-      { id: "1", text: "JavaScript", votes: 45, pollId: "1" },
-      { id: "2", text: "Python", votes: 38, pollId: "1" },
-      { id: "3", text: "TypeScript", votes: 32, pollId: "1" },
-      { id: "4", text: "Go", votes: 18, pollId: "1" },
-    ],
-    creatorId: "1",
-    creator: {
-      id: "1",
-      email: "demo@example.com",
-      username: "demo_user",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    isActive: true,
-    allowMultipleVotes: false,
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-    updatedAt: new Date(),
-    totalVotes: 133,
-  },
-  {
-    id: "2",
-    title: "Best time for team meetings?",
-    description: "Let's find the optimal time slot that works for everyone",
-    options: [
-      { id: "5", text: "9:00 AM", votes: 12, pollId: "2" },
-      { id: "6", text: "2:00 PM", votes: 28, pollId: "2" },
-      { id: "7", text: "4:00 PM", votes: 15, pollId: "2" },
-    ],
-    creatorId: "1",
-    creator: {
-      id: "1",
-      email: "demo@example.com",
-      username: "demo_user",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    isActive: true,
-    allowMultipleVotes: true,
-    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
-    updatedAt: new Date(),
-    totalVotes: 55,
-  },
-]
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import {
+  CreatePollData,
+  Poll,
+  ApiResponse,
+  PaginatedResponse,
+  PollFilters,
+} from "@/types";
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
+    const { searchParams } = new URL(request.url);
+    const supabase = await createClient();
 
     // Extract query parameters
-    const search = searchParams.get("search") || ""
-    const isActiveParam = searchParams.get("isActive")
-    const sortBy = searchParams.get("sortBy") || "createdAt"
-    const sortOrder = searchParams.get("sortOrder") || "desc"
-    const page = parseInt(searchParams.get("page") || "1")
-    const limit = parseInt(searchParams.get("limit") || "10")
+    const search = searchParams.get("search") || "";
+    const isActiveParam = searchParams.get("isActive");
+    const creatorId = searchParams.get("creatorId");
+    const sortBy = searchParams.get("sortBy") || "created_at";
+    const sortOrder = searchParams.get("sortOrder") || "desc";
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
 
-    // Filter polls based on parameters
-    let filteredPolls = [...mockPolls]
+    // Build the query
+    let query = supabase.from("polls").select(`
+        id,
+        question,
+        created_at,
+        ends_at,
+        user_id,
+        options (
+          id,
+          text,
+          poll_id
+        )
+      `);
 
+    // Apply search filter
     if (search) {
-      filteredPolls = filteredPolls.filter(poll =>
-        poll.title.toLowerCase().includes(search.toLowerCase()) ||
-        poll.description?.toLowerCase().includes(search.toLowerCase())
-      )
+      query = query.ilike("question", `%${search}%`);
     }
 
+    // Apply creator filter
+    if (creatorId) {
+      query = query.eq("user_id", creatorId);
+    }
+
+    // Apply active filter (check if poll hasn't expired)
     if (isActiveParam !== null) {
-      const isActive = isActiveParam === "true"
-      filteredPolls = filteredPolls.filter(poll => poll.isActive === isActive)
+      const isActive = isActiveParam === "true";
+      if (isActive) {
+        query = query.or(
+          "ends_at.is.null,ends_at.gt." + new Date().toISOString(),
+        );
+      } else {
+        query = query.lt("ends_at", new Date().toISOString());
+      }
     }
 
-    // Sort polls
-    filteredPolls.sort((a, b) => {
-      let aValue: any = a[sortBy as keyof Poll]
-      let bValue: any = b[sortBy as keyof Poll]
+    // Apply sorting
+    const dbSortBy =
+      sortBy === "createdAt"
+        ? "created_at"
+        : sortBy === "updatedAt"
+          ? "created_at"
+          : "created_at";
+    query = query.order(dbSortBy, { ascending: sortOrder === "asc" });
 
-      if (sortBy === "createdAt" || sortBy === "updatedAt") {
-        aValue = new Date(aValue).getTime()
-        bValue = new Date(bValue).getTime()
-      }
+    // Apply pagination
+    const startIndex = (page - 1) * limit;
+    query = query.range(startIndex, startIndex + limit - 1);
 
-      if (sortOrder === "asc") {
-        return aValue > bValue ? 1 : -1
+    const { data: pollsData, error: pollsError, count } = await query;
+
+    if (pollsError) {
+      console.error("Supabase error:", pollsError);
+      throw new Error(pollsError.message);
+    }
+
+    // Get vote counts for each poll
+    const pollIds = pollsData?.map((poll) => poll.id) || [];
+    let votesData: any[] = [];
+
+    if (pollIds.length > 0) {
+      const { data: votes, error: votesError } = await supabase
+        .from("votes")
+        .select("poll_id, option_id")
+        .in("poll_id", pollIds);
+
+      if (votesError) {
+        console.error("Votes error:", votesError);
       } else {
-        return aValue < bValue ? 1 : -1
+        votesData = votes || [];
       }
-    })
+    }
 
-    // Paginate results
-    const startIndex = (page - 1) * limit
-    const endIndex = startIndex + limit
-    const paginatedPolls = filteredPolls.slice(startIndex, endIndex)
+    // Transform data to match our Poll interface
+    const transformedPolls: Poll[] =
+      pollsData?.map((poll) => {
+        const pollVotes = votesData.filter((vote) => vote.poll_id === poll.id);
+        const totalVotes = pollVotes.length;
+
+        const optionsWithVotes = poll.options.map((option) => {
+          const optionVotes = pollVotes.filter(
+            (vote) => vote.option_id === option.id,
+          ).length;
+          return {
+            id: option.id,
+            text: option.text,
+            votes: optionVotes,
+            pollId: option.poll_id,
+          };
+        });
+
+        return {
+          id: poll.id,
+          title: poll.question,
+          description: undefined, // Not in our current schema, but keeping for compatibility
+          options: optionsWithVotes,
+          creatorId: poll.user_id || "",
+          creator: {
+            id: poll.user_id || "",
+            email: "",
+            username: "",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+          isActive: poll.ends_at ? new Date(poll.ends_at) > new Date() : true,
+          allowMultipleVotes: false, // Not in our current schema
+          expiresAt: poll.ends_at ? new Date(poll.ends_at) : undefined,
+          createdAt: new Date(poll.created_at),
+          updatedAt: new Date(poll.created_at),
+          totalVotes,
+        };
+      }) || [];
 
     const response: PaginatedResponse<Poll> = {
       success: true,
-      data: paginatedPolls,
+      data: transformedPolls,
       meta: {
         page,
         limit,
-        total: filteredPolls.length,
-        totalPages: Math.ceil(filteredPolls.length / limit),
+        total: count || 0,
+        totalPages: Math.ceil((count || 0) / limit),
       },
-    }
+    };
 
-    return NextResponse.json(response, { status: 200 })
+    return NextResponse.json(response, { status: 200 });
   } catch (error) {
-    console.error("Get polls error:", error)
+    console.error("Get polls error:", error);
     return NextResponse.json(
       {
         success: false,
         error: "Internal server error",
       } as ApiResponse,
-      { status: 500 }
-    )
+      { status: 500 },
+    );
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    // TODO: Implement authentication middleware
-    // For now, we'll assume the user is authenticated
+    const supabase = await createClient();
+    const body: CreatePollData = await request.json();
 
-    const body: CreatePollData = await request.json()
+    console.log("Creating poll with data:", {
+      title: body.title,
+      optionsCount: body.options?.length,
+      hasDescription: !!body.description,
+      allowMultipleVotes: body.allowMultipleVotes,
+      expiresAt: body.expiresAt,
+    });
 
     // Validate input
     if (!body.title || !body.options || body.options.length < 2) {
@@ -140,8 +179,8 @@ export async function POST(request: NextRequest) {
           success: false,
           error: "Title and at least 2 options are required",
         } as ApiResponse,
-        { status: 400 }
-      )
+        { status: 400 },
+      );
     }
 
     if (body.title.length < 5) {
@@ -150,47 +189,143 @@ export async function POST(request: NextRequest) {
           success: false,
           error: "Title must be at least 5 characters long",
         } as ApiResponse,
-        { status: 400 }
-      )
+        { status: 400 },
+      );
     }
 
-    // TODO: Get actual user from authentication
-    const mockUser = {
-      id: "1",
-      email: "demo@example.com",
-      username: "demo_user",
-      createdAt: new Date(),
-      updatedAt: new Date(),
+    // Filter out empty options
+    const validOptions = body.options.filter(
+      (option) => option.trim().length > 0,
+    );
+    if (validOptions.length < 2) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "At least 2 valid options are required",
+        } as ApiResponse,
+        { status: 400 },
+      );
     }
 
-    // Create new poll
+    // Get current user (if authenticated)
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError) {
+      console.error("Auth error:", authError);
+    }
+
+    const userId = user?.id || null;
+    console.log("User context:", {
+      userId,
+      hasUser: !!user,
+      authError: !!authError,
+    });
+
+    // Insert poll into database
+    const pollInsertData = {
+      question: body.title.trim(),
+      ends_at: body.expiresAt ? body.expiresAt.toISOString() : null,
+      user_id: userId,
+    };
+    console.log("Inserting poll with data:", pollInsertData);
+
+    const { data: pollData, error: pollError } = await supabase
+      .from("polls")
+      .insert(pollInsertData)
+      .select()
+      .single();
+
+    if (pollError) {
+      console.error("Poll creation error:", pollError);
+      console.error("Poll error details:", {
+        code: pollError.code,
+        details: pollError.details,
+        hint: pollError.hint,
+        message: pollError.message,
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Failed to create poll: " + pollError.message,
+        } as ApiResponse,
+        { status: 500 },
+      );
+    }
+
+    if (!pollData) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Failed to create poll: No data returned",
+        } as ApiResponse,
+        { status: 500 },
+      );
+    }
+
+    // Insert options
+    const optionsToInsert = validOptions.map((optionText) => ({
+      poll_id: pollData.id,
+      text: optionText.trim(),
+    }));
+
+    console.log("Inserting options:", optionsToInsert);
+
+    const { data: optionsData, error: optionsError } = await supabase
+      .from("options")
+      .insert(optionsToInsert)
+      .select();
+
+    if (optionsError) {
+      console.error("Options creation error:", optionsError);
+      console.error("Options error details:", {
+        code: optionsError.code,
+        details: optionsError.details,
+        hint: optionsError.hint,
+        message: optionsError.message,
+      });
+      // Try to clean up the poll if options failed
+      await supabase.from("polls").delete().eq("id", pollData.id);
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Failed to create poll options: " + optionsError.message,
+        } as ApiResponse,
+        { status: 500 },
+      );
+    }
+
+    // Create the poll response object
     const newPoll: Poll = {
-      id: Math.random().toString(36).substr(2, 9),
-      title: body.title,
+      id: pollData.id,
+      title: pollData.question,
       description: body.description,
-      options: body.options.map((optionText, index) => ({
-        id: Math.random().toString(36).substr(2, 9),
-        text: optionText,
+      options: (optionsData || []).map((option) => ({
+        id: option.id,
+        text: option.text,
         votes: 0,
-        pollId: "", // Will be set after poll creation
+        pollId: option.poll_id,
       })),
-      creatorId: mockUser.id,
-      creator: mockUser,
-      isActive: true,
+      creatorId: pollData.user_id || "",
+      creator: {
+        id: pollData.user_id || "",
+        email: user?.email || "",
+        username: user?.user_metadata?.username || "",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      isActive: pollData.ends_at
+        ? new Date(pollData.ends_at) > new Date()
+        : true,
       allowMultipleVotes: body.allowMultipleVotes,
-      expiresAt: body.expiresAt,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      expiresAt: pollData.ends_at ? new Date(pollData.ends_at) : undefined,
+      createdAt: new Date(pollData.created_at),
+      updatedAt: new Date(pollData.created_at),
       totalVotes: 0,
-    }
-
-    // Set pollId for options
-    newPoll.options.forEach(option => {
-      option.pollId = newPoll.id
-    })
-
-    // TODO: Save to database
-    mockPolls.unshift(newPoll)
+    };
 
     return NextResponse.json(
       {
@@ -198,16 +333,21 @@ export async function POST(request: NextRequest) {
         data: newPoll,
         message: "Poll created successfully",
       } as ApiResponse<Poll>,
-      { status: 201 }
-    )
+      { status: 201 },
+    );
   } catch (error) {
-    console.error("Create poll error:", error)
+    console.error("Create poll error:", error);
+    console.error(
+      "Error stack:",
+      error instanceof Error ? error.stack : "No stack trace",
+    );
+
     return NextResponse.json(
       {
         success: false,
-        error: "Internal server error",
+        error: error instanceof Error ? error.message : "Internal server error",
       } as ApiResponse,
-      { status: 500 }
-    )
+      { status: 500 },
+    );
   }
 }

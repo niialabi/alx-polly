@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -9,74 +9,84 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { LoginData } from "@/types"
-import { isValidEmail } from "@/lib/utils"
-import Link from "next/link"
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { LoginData } from "@/types";
+import { isValidEmail } from "@/lib/utils";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
-interface LoginFormProps {
-  onSubmit: (data: LoginData) => Promise<void>
-  isLoading?: boolean
-}
-
-export function LoginForm({ onSubmit, isLoading = false }: LoginFormProps) {
+export function LoginForm() {
+  const supabase = createClient();
+  const router = useRouter();
   const [formData, setFormData] = useState<LoginData>({
     email: "",
     password: "",
-  })
-  const [errors, setErrors] = useState<Partial<LoginData>>({})
+  });
+  const [errors, setErrors] = useState<Partial<LoginData>>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<LoginData> = {}
+    const newErrors: Partial<LoginData> = {};
 
     if (!formData.email) {
-      newErrors.email = "Email is required"
+      newErrors.email = "Email is required";
     } else if (!isValidEmail(formData.email)) {
-      newErrors.email = "Please enter a valid email address"
+      newErrors.email = "Please enter a valid email address";
     }
 
     if (!formData.password) {
-      newErrors.password = "Password is required"
+      newErrors.password = "Password is required";
     } else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters"
+      newErrors.password = "Password must be at least 6 characters";
     }
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
+    setAuthError(null);
 
     if (!validateForm()) {
-      return
+      return;
     }
 
-    try {
-      await onSubmit(formData)
-    } catch (error) {
-      // Error handling is done in the parent component
+    setIsLoading(true);
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: formData.email,
+      password: formData.password,
+    });
+
+    setIsLoading(false);
+
+    if (error) {
+      setAuthError(error.message);
+    } else {
+      router.push("/dashboard");
     }
-  }
+  };
 
-  const handleInputChange = (field: keyof LoginData) => (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: e.target.value,
-    }))
-
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({
+  const handleInputChange =
+    (field: keyof LoginData) => (e: React.ChangeEvent<HTMLInputElement>) => {
+      setFormData((prev) => ({
         ...prev,
-        [field]: undefined,
-      }))
-    }
-  }
+        [field]: e.target.value,
+      }));
+
+      // Clear error when user starts typing
+      if (errors[field]) {
+        setErrors((prev) => ({
+          ...prev,
+          [field]: undefined,
+        }));
+      }
+    };
 
   return (
     <Card className="w-full max-w-md">
@@ -88,6 +98,9 @@ export function LoginForm({ onSubmit, isLoading = false }: LoginFormProps) {
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
+          {authError && (
+            <p className="text-sm text-center text-red-500">{authError}</p>
+          )}
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -120,24 +133,17 @@ export function LoginForm({ onSubmit, isLoading = false }: LoginFormProps) {
           </div>
         </CardContent>
         <CardFooter className="flex flex-col space-y-4">
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={isLoading}
-          >
+          <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? "Signing in..." : "Sign in"}
           </Button>
           <div className="text-sm text-center text-muted-foreground">
             Don't have an account?{" "}
-            <Link
-              href="/register"
-              className="text-primary hover:underline"
-            >
+            <Link href="/register" className="text-primary hover:underline">
               Sign up
             </Link>
           </div>
         </CardFooter>
       </form>
     </Card>
-  )
+  );
 }
