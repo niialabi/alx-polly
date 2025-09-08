@@ -7,7 +7,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Vote, Users, BarChart3, Clock, Shield, Zap } from "lucide-react";
+import {
+  LogIn,
+  Vote,
+  Users,
+  BarChart3,
+  Clock,
+  Shield,
+  Zap,
+} from "lucide-react";
 
 export default function Home() {
   return (
@@ -36,6 +44,12 @@ export default function Home() {
             </Button>
             <Button variant="outline" size="lg" asChild>
               <Link href="/polls">Browse Polls</Link>
+            </Button>
+            <Button variant="secondary" size="lg" asChild>
+              <Link href="/login">
+                <LogIn className="h-5 w-5 mr-2" />
+                Login
+              </Link>
             </Button>
           </div>
         </div>

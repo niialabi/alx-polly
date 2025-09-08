@@ -233,6 +233,7 @@ export function CreatePollForm({
                     size="icon"
                     onClick={() => removeOption(index)}
                     disabled={isLoading}
+                    aria-label={`Remove option ${index + 1}`}
                   >
                     <X className="h-4 w-4" />
                   </Button>
